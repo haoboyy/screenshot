@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动截图</title>
+</head>
+<body>
+    <h1>正在捕获屏幕画面...</h1>
+    <script>
+        // 后端服务器地址
+        const backendUrl = 'https://<你的后端地址>/upload'; // 替换为你的后端地址
+
+        async function captureScreen() {
+            try {
+                // 请求屏幕捕获权限
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const track = stream.getVideoTracks()[0];
+
+                // 创建 Canvas 并绘制屏幕画面
+                const canvas = document.createElement('canvas');
+                const [width, height] = [stream.getVideoTracks()[0].getSettings().width, stream.getVideoTracks()[0].getSettings().height];
+                canvas.width = width;
+                canvas.height = height;
+                const context = canvas.getContext('2d');
+                const video = document.createElement('video');
+                video.srcObject = stream;
+
+                // 等待视频流加载
+                await new Promise(resolve => (video.onloadedmetadata = resolve));
+                video.play();
+                context.drawImage(video, 0, 0, width, height);
+
+                // 停止捕获屏幕流
+                track.stop();
+
+                // 将画面转换为 Base64
+                const imageData = canvas.toDataURL('image/jpeg');
+
+                // 发送到后端
+                fetch(backendUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imageData }),
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('屏幕截图已成功上传！');
+                    } else {
+                        alert('上传失败，请稍后重试。');
+                    }
+                })
+                .catch(error => {
+                    console.error('上传出错:', error);
+                });
+            } catch (error) {
+                alert('无法捕获屏幕: ' + error.message);
+            }
+        }
+
+        // 页面加载时自动调用
+        captureScreen();
+    </script>
+</body>
+</html>
